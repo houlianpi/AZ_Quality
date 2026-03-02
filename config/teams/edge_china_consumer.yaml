@@ -1,0 +1,46 @@
+# config/teams/edge_china_consumer.yaml
+team_name: edge-china-consumer
+table_name: edge_china_consumer_bugs
+
+queries:
+  blocking:
+    query_id: "794cee31-0a95-4490-a120-68e2a7d51578"
+    bug_type: "Blocking"
+  a11y:
+    query_id: "3a9adaff-387a-4f34-9e69-9fb5288c0f60"
+    bug_type: "A11y"
+  security:
+    query_id: "36ab0106-671a-4ce1-8bbd-f6a96291a4d1"
+    bug_type: "Security"
+  need_triage:
+    query_id: "c0f09030-b1e7-43f6-84d2-4b05de23d423"
+    bug_type: "NeedTriage"
+  p0p1:
+    query_id: "64965d76-01cd-4951-b917-b491a055d207"
+    bug_type: "P0P1"
+
+# Field mapping: ADO field names -> database columns
+# Uncomment and modify if your ADO uses different field names
+field_mapping:
+  sdl_severity: "OSG.SDLSeverity"  # Custom SDL Severity field
+
+# Required fields configuration
+# Fields that must have values (will fail validation if missing)
+required_fields:
+  required:
+    - ID
+    - Title
+    - State
+    - Assigned To
+    - Area Path
+    - Created Date
+  # Fields to warn about if missing (but still allow)
+  warn_if_missing:
+    - Due Date
+    - Priority
+    - Severity
+    - Blocking
+    - Release
+    - Tags
+    - SDL Severity
+

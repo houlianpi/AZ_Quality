@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quality Push Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">QP</div>
+            <div class="sidebar-title">Quality Push</div>
+        </div>
+        <!-- User Profile (shown when logged in) -->
+        <div id="user-profile" class="user-profile" style="display: none;">
+            <img id="user-avatar" class="user-avatar" src="" alt="Avatar">
+            <div class="user-info">
+                <div id="user-name" class="user-name">--</div>
+                <div id="user-email" class="user-email">--</div>
+            </div>
+            <button id="logout-btn" class="logout-btn" title="Logout">⏻</button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/" class="sidebar-link active">
+                <span class="sidebar-icon">📊</span>
+                <span class="sidebar-text">Overview</span>
+            </a>
+            <div class="sidebar-section">Teams</div>
+            <div id="sidebar-teams" class="sidebar-teams">
+                <!-- Teams will be loaded dynamically -->
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-version">v1.0</div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="terminal-container">
+            <!-- Terminal Window -->
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <div class="terminal-dots">
+                        <span class="terminal-dot red"></span>
+                        <span class="terminal-dot yellow"></span>
+                        <span class="terminal-dot green"></span>
+                    </div>
+                    <div class="terminal-title">quality-push-dashboard — bash</div>
+                </div>
+                <div class="terminal-body">
+                    <!-- ASCII Art Header -->
+                    <pre class="ascii-header">
+ ██████╗ ██╗   ██╗ █████╗ ██╗     ██╗████████╗██╗   ██╗    ██████╗ ██╗   ██╗███████╗██╗  ██╗
+██╔═══██╗██║   ██║██╔══██╗██║     ██║╚══██╔══╝╚██╗ ██╔╝    ██╔══██╗██║   ██║██╔════╝██║  ██║
+██║   ██║██║   ██║███████║██║     ██║   ██║    ╚████╔╝     ██████╔╝██║   ██║███████╗███████║
+██║▄▄ ██║██║   ██║██╔══██║██║     ██║   ██║     ╚██╔╝      ██╔═══╝ ██║   ██║╚════██║██╔══██║
+╚██████╔╝╚██████╔╝██║  ██║███████╗██║   ██║      ██║       ██║     ╚██████╔╝███████║██║  ██║
+ ╚══▀▀═╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝   ╚═╝      ╚═╝       ╚═╝      ╚═════╝ ╚══════╝╚═╝  ╚═╝
+                    </pre>
+
+                    <!-- Command Prompt -->
+                    <div class="prompt-line">
+                        <span class="prompt-user">edge</span><span class="prompt-at">@</span><span class="prompt-host">quality-push</span>
+                        <span class="prompt-path">~/dashboard</span>
+                        <span class="prompt-symbol">$</span>
+                        <span class="prompt-cmd">./show_summary.py --all-teams</span>
+                        <span class="cursor"></span>
+                    </div>
+
+                    <!-- Report Output -->
+                    <div class="report-output">
+                        <div>[<span id="report-timestamp" class="timestamp">--</span>] Report generated successfully</div>
+                        <div>Snapshot: <span id="snapshot-date" class="team-label">--</span></div>
+                    </div>
+
+                    <!-- Summary Stats Section -->
+                    <div class="section-header">GLOBAL SUMMARY</div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card info">
+                            <div class="stat-label">Total Bugs</div>
+                            <div class="stat-value" id="stat-total">--</div>
+                            <div class="stat-desc">Active tracked bugs</div>
+                        </div>
+                        <div class="stat-card error">
+                            <div class="stat-label">Blocking Bugs</div>
+                            <div class="stat-value" id="stat-blocking">--</div>
+                            <div class="stat-desc">Critical blockers</div>
+                        </div>
+                        <div class="stat-card warning">
+                            <div class="stat-label">Overdue SLA</div>
+                            <div class="stat-value" id="stat-overdue">--</div>
+                            <div class="stat-desc">Past due date</div>
+                        </div>
+                        <div class="stat-card purple">
+                            <div class="stat-label">Need Triage</div>
+                            <div class="stat-value" id="stat-needtriage">--</div>
+                            <div class="stat-desc">Awaiting triage</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Overview Section -->
+            <div class="section-header">TEAM OVERVIEW</div>
+
+            <div class="team-table-container">
+                <table class="team-table">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th>Total</th>
+                            <th>Blocking</th>
+                            <th>P0/P1</th>
+                            <th>Overdue</th>
+                        </tr>
+                    </thead>
+                    <tbody id="team-table-body">
+                        <tr>
+                            <td colspan="5" class="loading">Loading teams</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Trend Chart Section -->
+            <div class="section-header">30-DAY TREND</div>
+
+            <div class="chart-card">
+                <div class="chart-title">Bug Count Over Time</div>
+                <div id="trend-chart-container" class="chart-container">
+                    <canvas id="trend-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="text-align: center; padding: 20px; color: var(--text-dim); font-size: 0.75rem;">
+                Quality Push Dashboard v1.0 • Data refreshes daily
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/table.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

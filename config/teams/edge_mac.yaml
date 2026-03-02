@@ -1,0 +1,20 @@
+# config/teams/edge_mac.yaml
+team_name: edge-mac
+table_name: edge_mac_bugs
+
+queries:
+  blocking:
+    query_id: "0c0a40b9-6879-4319-bf56-846be56c58a2"
+    bug_type: "Blocking"
+  a11y:
+    query_id: "d21e50d5-050f-4a43-8764-9a9f63c2f39b"
+    bug_type: "A11y"
+  security:
+    query_id: "aacd97be-78a2-478b-b8c3-4d6fe9cc5d88"
+    bug_type: "Security"
+  need_triage:
+    query_id: "b973adc4-df8c-46cc-b37d-e0292b4646c4"
+    bug_type: "NeedTriage"
+  p0p1:
+    query_id: "b4c5733e-0d87-4ad8-8e3d-d4c35ae4ffef"
+    bug_type: "P0P1"

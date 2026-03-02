@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edge Mobile Team - Quality Push Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* GitHub Dark Theme - Terminal Style */
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --bg-card: #161b22;
+            --bg-hover: #1f2428;
+            --bg-input: #0d1117;
+
+            /* Terminal accent colors */
+            --accent-green: #3fb950;
+            --accent-blue: #58a6ff;
+            --accent-yellow: #d29922;
+            --accent-orange: #db6d28;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
+            --accent-cyan: #39c5cf;
+            --accent-pink: #db61a2;
+
+            /* Text colors */
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --text-dim: #484f58;
+
+            /* Borders */
+            --border-default: #30363d;
+            --border-muted: #21262d;
+
+            /* Typography */
+            --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+
+            /* Spacing */
+            --space-xs: 4px;
+            --space-sm: 8px;
+            --space-md: 16px;
+            --space-lg: 24px;
+            --space-xl: 32px;
+            --space-2xl: 48px;
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 14px;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-mono);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Scanline effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.03),
+                rgba(0, 0, 0, 0.03) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            z-index: 9999;
+        }
+
+        /* Main Container */
+        .terminal-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--space-lg);
+        }
+
+        /* Terminal Window */
+        .terminal-window {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: var(--space-lg);
+        }
+
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-sm) var(--space-md);
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-default);
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ff5f56; }
+        .terminal-dot.yellow { background: #ffbd2e; }
+        .terminal-dot.green { background: #27c93f; }
+
+        .terminal-title {
+            flex: 1;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .terminal-body {
+            padding: var(--space-lg);
+        }
+
+        /* Command Prompt */
+        .prompt-line {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+        }
+
+        .prompt-user {
+            color: var(--accent-green);
+        }
+
+        .prompt-at {
+            color: var(--text-muted);
+        }
+
+        .prompt-host {
+            color: var(--accent-purple);
+        }
+
+        .prompt-path {
+            color: var(--accent-blue);
+        }
+
+        .prompt-symbol {
+            color: var(--accent-cyan);
+        }
+
+        .prompt-cmd {
+            color: var(--text-primary);
+        }
+
+        /* Typing cursor animation */
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1.2em;
+            background: var(--accent-green);
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* ASCII Header */
+        .ascii-header {
+            color: var(--accent-cyan);
+            font-size: 0.7rem;
+            line-height: 1.2;
+            margin-bottom: var(--space-lg);
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            margin: var(--space-xl) 0 var(--space-md) 0;
+            color: var(--accent-yellow);
+        }
+
+        .section-header::before {
+            content: '>';
+            color: var(--accent-green);
+        }
+
+        .section-header::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--border-default), transparent);
+            margin-left: var(--space-md);
+        }
+
+        /* Stats Grid - Terminal Style */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-md);
+            margin-bottom: var(--space-xl);
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 6px;
+            padding: var(--space-md);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--stat-color, var(--accent-blue));
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--stat-color, var(--accent-blue));
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-card.success { --stat-color: var(--accent-green); }
+        .stat-card.warning { --stat-color: var(--accent-yellow); }
+        .stat-card.error { --stat-color: var(--accent-red); }
+        .stat-card.info { --stat-color: var(--accent-blue); }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: var(--space-xs);
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--stat-color, var(--text-primary));
+        }
+
+        .stat-desc {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: var(--space-xs);
+        }
+
+        /* Progress Bars - CLI Style */
+        .progress-section {
+            margin-bottom: var(--space-xl);
+        }
+
+        .progress-item {
+            display: grid;
+            grid-template-columns: 180px 1fr 60px;
+            gap: var(--space-md);
+            align-items: center;
+            padding: var(--space-sm) 0;
+            border-bottom: 1px dashed var(--border-muted);
+        }
+
+        .progress-item:last-child {
+            border-bottom: none;
+        }
+
+        .progress-label {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-size: 0.85rem;
+        }
+
+        .progress-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+        }
+
+        .progress-icon.blocking { background: var(--accent-red); }
+        .progress-icon.security { background: var(--accent-orange); }
+        .progress-icon.performance { background: var(--accent-yellow); }
+        .progress-icon.disabled { background: var(--accent-green); }
+        .progress-icon.accessibility { background: var(--accent-blue); }
+        .progress-icon.p0p1 { background: var(--text-muted); }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.8s ease;
+        }
+
+        .progress-fill.blocking { background: var(--accent-red); }
+        .progress-fill.security { background: var(--accent-orange); }
+        .progress-fill.performance { background: var(--accent-yellow); }
+        .progress-fill.disabled { background: var(--accent-green); }
+        .progress-fill.accessibility { background: var(--accent-blue); }
+        .progress-fill.p0p1 { background: var(--text-muted); }
+
+        .progress-count {
+            text-align: right;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        /* Charts Row */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+            margin-bottom: var(--space-xl);
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 6px;
+            padding: var(--space-lg);
+        }
+
+        .chart-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-size: 0.85rem;
+            color: var(--accent-yellow);
+            margin-bottom: var(--space-lg);
+        }
+
+        .chart-title::before {
+            content: '#';
+            color: var(--accent-green);
+        }
+
+        /* Deadline Distribution - ASCII Bar Chart */
+        .ascii-chart {
+            font-size: 0.8rem;
+        }
+
+        .ascii-bar-row {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-xs) 0;
+        }
+
+        .ascii-bar-label {
+            width: 80px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .ascii-bar-visual {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .ascii-bar-blocks {
+            color: var(--accent-green);
+            font-family: var(--font-mono);
+            letter-spacing: -1px;
+        }
+
+        .ascii-bar-blocks.overdue { color: var(--accent-red); }
+        .ascii-bar-blocks.warning { color: var(--accent-yellow); }
+        .ascii-bar-blocks.ok { color: var(--accent-green); }
+
+        .ascii-bar-value {
+            width: 40px;
+            text-align: right;
+            color: var(--text-muted);
+        }
+
+        /* Assignee List */
+        .assignee-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .assignee-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            padding: var(--space-sm);
+            border-radius: 4px;
+            transition: background 0.15s ease;
+        }
+
+        .assignee-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .assignee-avatar {
+            width: 28px;
+            height: 28px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: var(--accent-cyan);
+        }
+
+        .assignee-name {
+            flex: 1;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .assignee-count {
+            font-size: 0.8rem;
+            color: var(--accent-green);
+            padding: 2px 8px;
+            background: rgba(63, 185, 80, 0.1);
+            border-radius: 10px;
+        }
+
+        /* Data Table - Terminal Style */
+        .table-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: var(--space-xl);
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-md);
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-default);
+        }
+
+        .table-title {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            font-size: 0.85rem;
+            color: var(--accent-yellow);
+        }
+
+        .table-title::before {
+            content: '$';
+            color: var(--accent-green);
+        }
+
+        .table-count {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            background: var(--bg-primary);
+            border-radius: 10px;
+            color: var(--text-muted);
+        }
+
+        .table-controls {
+            display: flex;
+            gap: var(--space-sm);
+        }
+
+        .filter-select, .search-input {
+            padding: 6px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-default);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        .filter-select:focus, .search-input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .search-input {
+            width: 200px;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-dim);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        th {
+            padding: var(--space-sm) var(--space-md);
+            text-align: left;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-default);
+            white-space: nowrap;
+        }
+
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable:hover {
+            color: var(--accent-blue);
+        }
+
+        th.sorted-asc::after { content: ' ▲'; color: var(--accent-green); font-size: 0.6rem; }
+        th.sorted-desc::after { content: ' ▼'; color: var(--accent-green); font-size: 0.6rem; }
+
+        td {
+            padding: var(--space-sm) var(--space-md);
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-muted);
+        }
+
+        tr:hover td {
+            background: var(--bg-hover);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .bug-id-link {
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .bug-id-link:hover {
+            text-decoration: underline;
+        }
+
+        .bug-title {
+            max-width: 280px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--text-primary);
+        }
+
+        .bug-type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .bug-type-badge.blocking {
+            background: rgba(248, 81, 73, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(248, 81, 73, 0.3);
+        }
+
+        .bug-type-badge.security {
+            background: rgba(219, 109, 40, 0.15);
+            color: var(--accent-orange);
+            border: 1px solid rgba(219, 109, 40, 0.3);
+        }
+
+        .bug-type-badge.performance {
+            background: rgba(210, 153, 34, 0.15);
+            color: var(--accent-yellow);
+            border: 1px solid rgba(210, 153, 34, 0.3);
+        }
+
+        .bug-type-badge.disabled {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(63, 185, 80, 0.3);
+        }
+
+        .bug-type-badge.accessibility {
+            background: rgba(88, 166, 255, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+        }
+
+        .bug-type-badge.p0p1 {
+            background: rgba(139, 148, 158, 0.15);
+            color: var(--text-secondary);
+            border: 1px solid rgba(139, 148, 158, 0.3);
+        }
+
+        .area-path {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .date-cell {
+            white-space: nowrap;
+            font-size: 0.75rem;
+        }
+
+        .deadline-cell {
+            display: flex;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .deadline-overdue {
+            color: var(--accent-red);
+            font-weight: 500;
+        }
+
+        .deadline-soon {
+            color: var(--accent-yellow);
+        }
+
+        .deadline-ok {
+            color: var(--text-secondary);
+        }
+
+        .overdue-icon {
+            color: var(--accent-red);
+        }
+
+        .assignee-cell {
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Pagination */
+        .table-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-md);
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border-default);
+        }
+
+        .pagination-info {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: var(--space-xs);
+        }
+
+        .page-btn {
+            padding: 4px 10px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-default);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .page-btn.active {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            color: var(--bg-primary);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: var(--space-xl) 0;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+        }
+
+        .footer a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(13, 17, 23, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .loading-text {
+            color: var(--accent-green);
+            font-size: 0.9rem;
+        }
+
+        .loading-text::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--space-2xl);
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 2rem;
+            margin-bottom: var(--space-md);
+            opacity: 0.5;
+        }
+
+        .empty-state-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-sm);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-default);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-dim);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .table-header {
+                flex-direction: column;
+                gap: var(--space-md);
+                align-items: flex-start;
+            }
+            .table-controls {
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            .search-input {
+                width: 100%;
+            }
+            .ascii-header {
+                font-size: 0.5rem;
+            }
+        }
+
+        /* File input hidden */
+        #json-file-input {
+            display: none;
+        }
+
+        /* Keyboard shortcuts hint */
+        .kbd {
+            display: inline-block;
+            padding: 2px 6px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-default);
+            border-radius: 3px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-text">Loading data</div>
+    </div>
+
+    <div class="terminal-container">
+        <!-- Main Terminal Window -->
+        <div class="terminal-window">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                </div>
+                <div class="terminal-title">quality-push — bash — 120×40</div>
+                <input type="file" id="json-file-input" accept=".json">
+                <button class="page-btn" onclick="document.getElementById('json-file-input').click()" style="font-size: 0.7rem;">
+                    [Load JSON]
+                </button>
+            </div>
+            <div class="terminal-body">
+                <!-- ASCII Header -->
+                <pre class="ascii-header">
+ ██████╗ ██╗   ██╗ █████╗ ██╗     ██╗████████╗██╗   ██╗    ██████╗ ██╗   ██╗███████╗██╗  ██╗
+██╔═══██╗██║   ██║██╔══██╗██║     ██║╚══██╔══╝╚██╗ ██╔╝    ██╔══██╗██║   ██║██╔════╝██║  ██║
+██║   ██║██║   ██║███████║██║     ██║   ██║    ╚████╔╝     ██████╔╝██║   ██║███████╗███████║
+██║▄▄ ██║██║   ██║██╔══██║██║     ██║   ██║     ╚██╔╝      ██╔═══╝ ██║   ██║╚════██║██╔══██║
+╚██████╔╝╚██████╔╝██║  ██║███████╗██║   ██║      ██║       ██║     ╚██████╔╝███████║██║  ██║
+ ╚══▀▀═╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝   ╚═╝      ╚═╝       ╚═╝      ╚═════╝ ╚══════╝╚═╝  ╚═╝
+                </pre>
+
+                <!-- Command Prompt -->
+                <div class="prompt-line">
+                    <span class="prompt-user">edge</span><span class="prompt-at">@</span><span class="prompt-host">quality-push</span>
+                    <span class="prompt-path">~/sla-tracker</span>
+                    <span class="prompt-symbol">$</span>
+                    <span class="prompt-cmd">./generate_report.py --team <span id="cmd-team">edge-mobile</span> --format html</span>
+                    <span class="cursor"></span>
+                </div>
+
+                <!-- Output Header -->
+                <div style="color: var(--accent-green); margin-bottom: var(--space-lg);">
+                    <div>[<span id="report-timestamp">--</span>] Report generated successfully</div>
+                    <div>Team: <span id="team-name" style="color: var(--accent-cyan);">--</span></div>
+                </div>
+
+                <!-- Stats Section -->
+                <div class="section-header">SUMMARY STATISTICS</div>
+
+                <div class="stats-grid">
+                    <div class="stat-card info">
+                        <div class="stat-label">Total Bugs</div>
+                        <div class="stat-value" id="stat-total">--</div>
+                        <div class="stat-desc">Active SLA tracked bugs</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-label">SLA Pass Rate</div>
+                        <div class="stat-value" id="stat-pass-rate">--%</div>
+                        <div class="stat-desc">Within deadline</div>
+                    </div>
+                    <div class="stat-card error">
+                        <div class="stat-label">Overdue</div>
+                        <div class="stat-value" id="stat-overdue">--</div>
+                        <div class="stat-desc">Needs immediate action</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-label">Has Deadline</div>
+                        <div class="stat-value" id="stat-deadline">--</div>
+                        <div class="stat-desc">Bugs with SLA</div>
+                    </div>
+                </div>
+
+                <!-- Bug Type Distribution -->
+                <div class="section-header">BUG TYPE DISTRIBUTION</div>
+
+                <div class="progress-section" id="category-bars">
+                    <!-- Populated by JS -->
+                </div>
+
+                <!-- Charts Row -->
+                <div class="charts-row">
+                    <!-- Deadline Distribution -->
+                    <div class="chart-card">
+                        <div class="chart-title">Deadline Distribution</div>
+                        <div class="ascii-chart" id="deadline-chart">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Assignee Distribution -->
+                    <div class="chart-card">
+                        <div class="chart-title">Top Assignees</div>
+                        <div class="assignee-list" id="assignee-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLA Bugs Table -->
+        <div class="section-header">SLA BUG DETAILS</div>
+
+        <div class="table-container" id="sla-table-container">
+            <div class="table-header">
+                <div style="display: flex; align-items: center; gap: var(--space-md);">
+                    <div class="table-title">sla_bugs.list()</div>
+                    <span class="table-count" id="sla-bug-count">0 items</span>
+                </div>
+                <div class="table-controls">
+                    <select class="filter-select" id="type-filter">
+                        <option value="">All Types</option>
+                        <option value="Blocking">Blocking</option>
+                        <option value="Security">Security</option>
+                        <option value="Performance">Performance</option>
+                        <option value="Disabled Tests">Disabled Tests</option>
+                        <option value="Accessibility">Accessibility</option>
+                    </select>
+                    <select class="filter-select" id="status-filter">
+                        <option value="">All Status</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="this_week">Due This Week</option>
+                        <option value="ok">On Track</option>
+                    </select>
+                    <input type="text" class="search-input" id="search-input" placeholder="grep 'bug_id|title'">
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="id">ID</th>
+                            <th>Title</th>
+                            <th class="sortable" data-sort="bug_type">Type</th>
+                            <th>Area Path</th>
+                            <th class="sortable" data-sort="created">Created</th>
+                            <th class="sortable sorted-asc" data-sort="deadline">Deadline</th>
+                            <th>Assigned To</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sla-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <div class="pagination-info" id="sla-pagination-info">Showing 0 - 0 of 0</div>
+                <div class="pagination-controls" id="sla-pagination">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- P0/P1 Bugs Table -->
+        <div class="section-header">P0/P1 ISSUES</div>
+
+        <div class="table-container" id="p0p1-table-container">
+            <div class="table-header">
+                <div style="display: flex; align-items: center; gap: var(--space-md);">
+                    <div class="table-title">p0p1_bugs.list()</div>
+                    <span class="table-count" id="p0p1-bug-count">0 items</span>
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Title</th>
+                            <th>Priority</th>
+                            <th>Area Path</th>
+                            <th>Created</th>
+                            <th>Deadline</th>
+                            <th>Assigned To</th>
+                        </tr>
+                    </thead>
+                    <tbody id="p0p1-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <div class="pagination-info" id="p0p1-pagination-info">Showing 0 - 0 of 0</div>
+                <div class="pagination-controls" id="p0p1-pagination">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div>Quality Push Dashboard v2.0 | <a href="https://dev.azure.com/microsoft/Edge">Azure DevOps</a></div>
+            <div style="margin-top: var(--space-sm); color: var(--text-dim);">
+                <kbd>Ctrl</kbd> + <kbd>F</kbd> to search | <kbd>↑</kbd><kbd>↓</kbd> to navigate
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Global state
+        let reportData = null;
+        let filteredSlaBugs = [];
+        let filteredP0P1Bugs = [];
+        let currentPage = 1;
+        let p0p1CurrentPage = 1;
+        const pageSize = 15;
+        let sortConfig = { key: 'deadline', direction: 'asc' };
+
+        // Embedded data placeholder
+        const EMBEDDED_DATA = {"meta": {"team_name": "Edge Mobile Team", "generated_at": "2026-02-11 10:33:24", "report_date": "2026-02-11", "version": "2.0"}, "summary": {"total_bugs": 164, "overdue_count": 6, "pass_rate": 95.6, "bugs_with_deadline": 135}, "categories": [{"key": "blocking", "name": "Blocking Issues", "icon": "🔴", "priority": 1, "count": 77}, {"key": "security", "name": "Security Issues", "icon": "🟠", "priority": 2, "count": 0}, {"key": "performance", "name": "Performance Issues", "icon": "🟡", "priority": 3, "count": 6}, {"key": "disabled_tests", "name": "Disabled Tests", "icon": "🟢", "priority": 4, "count": 23}, {"key": "accessibility", "name": "Accessibility Issues", "icon": "🔵", "priority": 5, "count": 12}, {"key": "p0p1", "name": "P0/P1 Issues", "icon": "⚪", "priority": 6, "count": 46}], "deadline_distribution": {"overdue": 6, "this_week": 0, "next_week": 1, "this_month": 77, "later": 51, "no_deadline": 29}, "assignee_distribution": [{"name": "Toni Yang", "count": 14}, {"name": "Haipeng Wang", "count": 11}, {"name": "Haibo Yu", "count": 9}, {"name": "Huili Liu", "count": 9}, {"name": "Ye Tian", "count": 9}, {"name": "Ke Yu", "count": 8}, {"name": "Jingping Sun", "count": 7}, {"name": "Storm Yin", "count": 7}, {"name": "Yu Jiang", "count": 6}, {"name": "Lin Huang", "count": 6}, {"name": "Halton Huo", "count": 5}, {"name": "Shao xuan Shen (CSI Interfusion Co Ltd)", "count": 5}, {"name": "Wangyang Dai", "count": 5}, {"name": "Zeyu Fu", "count": 5}, {"name": "Lin Guo", "count": 5}, {"name": "Ting Ding", "count": 4}, {"name": "Zengchan Liu", "count": 4}, {"name": "Ziwen Lin", "count": 4}, {"name": "Active", "count": 3}, {"name": "Daiming Pan", "count": 3}, {"name": "Yuan Yin", "count": 3}, {"name": "Guting Chen", "count": 3}, {"name": "Weipeng Li", "count": 3}, {"name": "Annam Prathyusha (HCL Technologies Corporate Services)", "count": 3}, {"name": "Guanghui Zhang", "count": 2}, {"name": "Zhuoyu Qian", "count": 2}, {"name": "GitHub Copilot", "count": 2}, {"name": "Chuan Li", "count": 2}, {"name": "Hengyou Zhang", "count": 2}, {"name": "Min Xiong", "count": 2}, {"name": "Mia Zhao", "count": 2}, {"name": "Yueqi Zhao", "count": 1}, {"name": "Chengdong Zhang", "count": 1}, {"name": "Li Liu", "count": 1}, {"name": "Nora Chen (CSI Interfusion Co Ltd)", "count": 1}, {"name": "Chao Zhang", "count": 1}, {"name": "Hao Wang", "count": 1}, {"name": "Tiantong Wu", "count": 1}, {"name": "Xiaowei Gao", "count": 1}, {"name": "Dongye He", "count": 1}], "sla_bugs": [{"id": 60211302, "title": "Keyboard focus moves to hidden elements while navigating from last element of the Favourite page", "bug_type": "Accessibility", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-11-17", "deadline": "2026-01-16", "is_overdue": true, "days_until_deadline": -26, "assigned_to": "Lin Huang", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60211302"}, {"id": 60334094, "title": "Voice over is announcing dual roles as link and button for 'Diagnostic data' button.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-11-25", "deadline": "2026-01-24", "is_overdue": true, "days_until_deadline": -18, "assigned_to": "Weipeng Li", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60334094"}, {"id": 60606678, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.history.HistoryTabHelperTest#testAppHistory", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-12-23", "deadline": "2026-02-05", "is_overdue": true, "days_until_deadline": -6, "assigned_to": "Zengchan Liu", "release": "Edge 145", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60606678"}, {"id": 60604780, "title": "Pump follow up: webrtc kH264 test failed", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals\\Multimedia", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Multimedia", "created": "2025-12-23", "deadline": "2026-02-05", "is_overdue": true, "days_until_deadline": -6, "assigned_to": "Zeyu Fu", "release": "Edge 145", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60604780"}, {"id": 60538602, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.customtabs.CustomTabPostMessageTest#testPostMessageWebContentsDestroyed", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-12-15", "deadline": "2026-02-05", "is_overdue": true, "days_until_deadline": -6, "assigned_to": "Zengchan Liu", "release": "Edge 145", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60538602"}, {"id": 61030266, "title": "regressions | 0.07-0.11% | main | android_bundle_edge_sizes\\ChromePublic.minimal.apks\\size:required:uncompressed", "bug_type": "Blocking", "priority": "P1", "area_path": "Fundamentals\\Perf", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Perf", "created": "2026-02-11", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Active", "release": "Edge 146", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61030266"}, {"id": 61030265, "title": "regressions | 0.21-0.29% | main | Multiple metrics regressed in ios_edge_sizes due to: Merged PR 14732841: [iOS] Copilot Vision: Add s...", "bug_type": "Blocking", "priority": "P1", "area_path": "Fundamentals\\Copilot", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Copilot", "created": "2026-02-11", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Ting Ding", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61030265"}, {"id": 61028873, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.printing.PrintingControllerTest#testDisallowPrintOnNativePage", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Active", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61028873"}, {"id": 61019540, "title": "[ios_strings.grd] Flagged: IDS_IOS_PASSKEY_INCOGNITO_INTERSTITIAL_DIALOG_SUBTITLE and IDS_IOS_PASSKEY_INCOGNITO_INTERSTITIAL_DIALOG_TITLE", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Daiming Pan", "release": "Edge 146", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61019540"}, {"id": 61019139, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.browsing_data.BrowsingDataRemoverIntegrationTest#testClearingTabs", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haibo Yu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61019139"}, {"id": 61017148, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.TabThemeTest#testOverlayColorOnNativePages", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haibo Yu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61017148"}, {"id": 61017145, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.fullscreen.FullscreenManagerTest#testEnterPendingPersistentFullscreen", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haibo Yu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61017145"}, {"id": 61017141, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.LauncherShortcutTest#testLauncherShortcut_SplitScreenLaunch__RegularTab", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haibo Yu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61017141"}, {"id": 61017139, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.supervised_user.IncognitoInteractionTest#incognitoTabsClosedWhenBrowserContentFilteringIsEnabledWithoutAccount", "bug_type": "Blocking", "priority": "", "area_path": "Identity", "area_path_full": "Edge\\Edge China\\Mobile\\Identity", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61017139"}, {"id": 61017137, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.ui.messages.snackbar.SnackbarTest#testPersistentQueueStackOrder", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Zengchan Liu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61017137"}, {"id": 61017136, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.edge_mobile_business.copilot.PrefsServiceTest#testToggleOverallSwitch_callsNative org.chromium.chrome.browser.edge_mobile_business.copilot.PrefsServiceTest#testUpdateEligibility_ca...", "bug_type": "Blocking", "priority": "", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61017136"}, {"id": 61017128, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.toolbar.extensions.ExtensionToolbarTest#testClickingOnASecondActionClosesTheFirst org.chromium.chrome.browser.toolbar.extensions.ExtensionToolbarTest#testUninstallExtensionWithActi...", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Zengchan Liu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61017128"}, {"id": 61016655, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.undo_tab_close_snackbar.UndoBarControllerTest#testDeleteTabGroup_WithOtherTab_Undo", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haibo Yu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61016655"}, {"id": 61015249, "title": "regressions | 0.05-0.09% | main | android_bundle_edge_sizes\\ChromePublic.minimal.apks\\size:required:uncompressed", "bug_type": "Blocking", "priority": "P1", "area_path": "Fundamentals\\Perf", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Perf", "created": "2026-02-10", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Ke Yu", "release": "Edge 146", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61015249"}, {"id": 61011178, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.undo_tab_close_snackbar.UndoBarControllerTest#testThrottleUndo_CommitSubset", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-09", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haibo Yu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61011178"}, {"id": 61011160, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.history.HistoryTabHelperTest#testAppHistory", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-09", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haibo Yu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61011160"}, {"id": 61008231, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.storage.BlobUrlStoreTest#testContentScheme", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-09", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haibo Yu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61008231"}, {"id": 61008218, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.dragdrop.DragAndDropLauncherActivityTest#testDraggedMultipleTabs_newWindow", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-09", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haibo Yu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61008218"}, {"id": 61008193, "title": "[AutoDisabler] Test(s) disabled for Triage: ServiceWorker/ExtensionApiTabTestWithContextType.Highlight", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-09", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61008193"}, {"id": 60997895, "title": "regressions | 0.04% | main | android_bundle_edge_sizes\\ChromePublic.minimal.apks\\size:required:uncompressed", "bug_type": "Blocking", "priority": "P1", "area_path": "Fundamentals\\Perf", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Perf", "created": "2026-02-07", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Ke Yu", "release": "Edge 146", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60997895"}, {"id": 60991204, "title": "Disabled Test: Test(s) disabled for Triage: EventMetricsBrowserTest.ServiceWorkerDispatchToAckTimeInactive", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-06", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60991204"}, {"id": 60990811, "title": "Disabled Test: Test(s) disabled for Triage: WebAccessibleResourcesBrowserTest.DNRRedirect", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-06", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60990811"}, {"id": 60989842, "title": "[AutoDisabler] Test(s) disabled for Triage: ExtensionActionViewModelFeatureRolloutBrowserTest.ExtensionActionWantsToRunAppearance/FeatureEnabled ExtensionActionViewModelFeatureRolloutBrowserTest.PageActionBlockedActions/FeatureDisabled FeatureDisabled/...", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-06", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60989842"}, {"id": 60989469, "title": "[AutoDisabler] Test(s) disabled for Triage: ExtensionActionViewModelFeatureRolloutBrowserTest.ExtensionActionContextMenuVisibility/FeatureEnabled", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-06", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60989469"}, {"id": 60985787, "title": "regressions | 0.04% | main | android_bundle_edge_sizes\\ChromePublic.minimal.apks\\size:required:uncompressed", "bug_type": "Blocking", "priority": "P1", "area_path": "Fundamentals\\Perf", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Perf", "created": "2026-02-06", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Ke Yu", "release": "Edge 146", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60985787"}, {"id": 60985596, "title": "[AutoDisabler] Test(s) disabled for Triage: ExtensionActionViewModelFeatureRolloutBrowserTest.GetSiteInteractionWithActiveTab/FeatureEnabled ExtensionActionViewModelFeatureRolloutBrowserTest.TestGetIconWithNullWebContents/FeatureEnabled ExtensionAction...", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-06", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60985596"}, {"id": 60985527, "title": "[AutoDisabler] Test(s) disabled for Triage: ExtensionActionViewModelFeatureRolloutBrowserTest.BrowserActionBlockedActions/FeatureDisabled ExtensionActionViewModelFeatureRolloutBrowserTest.OnlyHostPermissionsAppearance/FeatureDisabled", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-06", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60985527"}, {"id": 60983420, "title": "Disabled Test: Test(s) disabled for Triage: EventMetricsBrowserTest.EventPageDispatchToAckTimeInactive", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-05", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60983420"}, {"id": 60979177, "title": "Disabled Test: Test(s) disabled for Triage: ExtensionBrowserTest.OptionsPage ExtensionBrowserTest.LoadChromeExtensionsWithOptionsParamWhenEmbedded", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-05", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60979177"}, {"id": 60977974, "title": "[AutoDisabler] Test(s) disabled for Triage: ServiceWorker/ExtensionApiTabTestWithContextType.Muted", "bug_type": "Blocking", "priority": "", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-02-05", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Haipeng Wang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60977974"}, {"id": 60975421, "title": "[AutoDisabler] Test(s) disabled for Triage: OpenTabProviderTest.TestChromeNewTabPageOmitted", "bug_type": "Blocking", "priority": "", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-05", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Huili Liu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60975421"}, {"id": 60975376, "title": "regressions | 8.17% | main | ios_edge_sizes\\Edge.app\\size:uncompressed", "bug_type": "Blocking", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-02-05", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Yuan Yin", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60975376"}, {"id": 60974323, "title": "[AutoDisabler] Test(s) disabled for Triage: ChromeSigninHelperTest.OpenBottomSheetWithConsistencyParameterWithSelectedEmailNotAvailable", "bug_type": "Blocking", "priority": "", "area_path": "Identity", "area_path_full": "Edge\\Edge China\\Mobile\\Identity", "created": "2026-02-05", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60974323"}, {"id": 60974304, "title": "[AutoDisabler] Test(s) disabled for Triage: ChromeSigninHelperTest.OpenBottomSheetWithConsistencyParameterWithSelectedEmail", "bug_type": "Blocking", "priority": "", "area_path": "Identity", "area_path_full": "Edge\\Edge China\\Mobile\\Identity", "created": "2026-02-05", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60974304"}, {"id": 60973233, "title": "regressions | 0.45% | main | android_edge_sizes\\ChromePublic.apk\\size:uncompressed", "bug_type": "Blocking", "priority": "P1", "area_path": "Fundamentals\\Perf", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Perf", "created": "2026-02-05", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Ke Yu", "release": "Edge 146", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60973233"}, {"id": 60971330, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.omnibox.LocationBarTest#testOmniboxSearchEngineLogo_unfocusedOnSRP_incognito", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Huili Liu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60971330"}, {"id": 60970307, "title": "edge_webui/apps/mobile_theme: Audit WebUI is working in M146", "bug_type": "Blocking", "priority": "", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Halton Huo", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60970307"}, {"id": 60970304, "title": "edge_webui/apps/mobile_pdf_reading_mode: Audit WebUI is working in M146", "bug_type": "Blocking", "priority": "", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Halton Huo", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60970304"}, {"id": 60970277, "title": "edge_webui/apps/mobile_topsites_add_page: Audit WebUI is working in M146", "bug_type": "Blocking", "priority": "", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Halton Huo", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60970277"}, {"id": 60970266, "title": "edge_webui/apps/mobile_extension: Audit WebUI is working in M146", "bug_type": "Blocking", "priority": "", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Halton Huo", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60970266"}, {"id": 60970264, "title": "edge_webui/apps/mobile_fre: Audit WebUI is working in M146", "bug_type": "Blocking", "priority": "", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Halton Huo", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60970264"}, {"id": 60965590, "title": "Disabled Test: Test(s) disabled for Triage: AccountMenuMediatorTest.TestDidTapAddAccountiOS26", "bug_type": "Blocking", "priority": "", "area_path": "Identity", "area_path_full": "Edge\\Edge China\\Mobile\\Identity", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60965590"}, {"id": 60965289, "title": "[AutoDisabler] Test(s) disabled for Triage: SafetyCheckNotificationClientTest.ProvisionalDisallowedByPolicy", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals\\Security and Privacy", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Security and Privacy", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Daiming Pan", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60965289"}, {"id": 60963192, "title": "[AutoDisabler] Test(s) disabled for Triage: AccountMenuMediatorTest.TestAccountTapedSignoutFailed", "bug_type": "Blocking", "priority": "", "area_path": "Identity", "area_path_full": "Edge\\Edge China\\Mobile\\Identity", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60963192"}, {"id": 60963182, "title": "[AutoDisabler] Test(s) disabled for Triage: AccountProfileMapperAccountsInSeparateProfilesTest.IdentityListNotification AccountProfileMapperAccountsInSeparateProfilesTest.RefreshTokenNotification AccountProfileMapperAccountsInSeparateProfilesTest.Manag...", "bug_type": "Blocking", "priority": "", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60963182"}, {"id": 60961264, "title": "[AutoDisabler] Test(s) disabled for Triage: AccountMenuMediatorTest.TestAccountTapedSignInFailed", "bug_type": "Blocking", "priority": "", "area_path": "Identity", "area_path_full": "Edge\\Edge China\\Mobile\\Identity", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60961264"}, {"id": 60961248, "title": "[AutoDisabler] Test(s) disabled for Triage: AccountProfileMapperAccountsInSeparateProfilesWithForceMigrationTest.AssignsPrimaryManagedAccountToManagedProfile", "bug_type": "Blocking", "priority": "", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2026-02-04", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60961248"}, {"id": 60943750, "title": "[AutoDisabler] Test(s) disabled for Triage: AccountMenuMediatorTest.TestAddSecondaryIdentity", "bug_type": "Blocking", "priority": "", "area_path": "Identity", "area_path_full": "Edge\\Edge China\\Mobile\\Identity", "created": "2026-02-03", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60943750"}, {"id": 60943658, "title": "[AutoDisabler] Test(s) disabled for Triage: AccountProfileMapperAccountsInSeparateProfilesTest.OnlyAvailableOnIos17Plus", "bug_type": "Blocking", "priority": "", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2026-02-03", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Toni Yang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60943658"}, {"id": 60942424, "title": "regressions | 0.08-0.11% | main | android_bundle_edge_sizes\\ChromePublic.minimal.apks\\size:required:uncompressed", "bug_type": "Blocking", "priority": "P1", "area_path": "Fundamentals\\Perf", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Perf", "created": "2026-02-03", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Ke Yu", "release": "Edge 146", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60942424"}, {"id": 60939555, "title": "regressions | 0.18-0.24% | main | Multiple metrics regressed due to: Merged PR 14612249: [Android] Add KOOM memory issue detection int...", "bug_type": "Blocking", "priority": "P1", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-02", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Ke Yu", "release": "Edge 146", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60939555"}, {"id": 60921665, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.notifications.TipsNotificationsFeaturePromoTest#testQuickDeleteBottomSheetDetailPageAccept", "bug_type": "Blocking", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-31", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Shao xuan Shen (CSI Interfusion Co Ltd)", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60921665"}, {"id": 60920597, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.notifications.TipsNotificationsFeaturePromoTest#testGoogleLensBottomSheetDetailPageAccept", "bug_type": "Blocking", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-31", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Shao xuan Shen (CSI Interfusion Co Ltd)", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60920597"}, {"id": 60917054, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.notifications.TipsNotificationsFeaturePromoTest#testQuickDeleteBottomSheetMainPageAccept org.chromium.chrome.browser.notifications.TipsNotificationsFeaturePromoTest#testBottomOmnib...", "bug_type": "Blocking", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-30", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Shao xuan Shen (CSI Interfusion Co Ltd)", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60917054"}, {"id": 60908950, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.customtabs.CustomTabPostMessageTest#testPostMessageReceivedInPage", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-29", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Jingping Sun", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60908950"}, {"id": 60872835, "title": "[iOS] Migrate JS bridge code from __gCrWeb.common to new WebKit messaging APIs", "bug_type": "Blocking", "priority": "P1", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-01-27", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Yueqi Zhao", "release": "Edge 146", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60872835"}, {"id": 60866055, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.edge_settings.default_browser.DefaultBrowserContextualPromoManagerTest#testOnPdfOpen_savesPdfType org.chromium.chrome.browser.edge_settings.default_browser.DefaultBrowserContextual...", "bug_type": "Blocking", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-26", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Guting Chen", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60866055"}, {"id": 60864132, "title": "[AutoDisabler] Test(s) disabled for Triage: TabHelperUtilTest.InfobarBadgeTabHelper/Empty", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-26", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Jingping Sun", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60864132"}, {"id": 60850275, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.tabmodel.UndoTabModelTest#testIncognito_UndoAlwaysNotSupported", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-23", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Jingping Sun", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60850275"}, {"id": 60843997, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.edge_ntp.EdgeNewTabPageV2Test#testFocusedModeShowView org.chromium.chrome.browser.edge_ntp.EdgeNewTabPageV2Test#testCustomModeShowView", "bug_type": "Blocking", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-23", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Shao xuan Shen (CSI Interfusion Co Ltd)", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60843997"}, {"id": 60837477, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.EdgeXExternalIntentHandlerTest#testExtensionDeepLink", "bug_type": "Blocking", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-22", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Wangyang Dai", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60837477"}, {"id": 60836540, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.webapps.WebApkUpdateManagerTest#testUpdateWarningOnNameAndShortnameChange__minorIconUpdateDlgEnabled", "bug_type": "Blocking", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-01-22", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Yu Jiang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60836540"}, {"id": 60829312, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.contextmenu.ContextMenuTabPTTest#openNewTabFromContextMenu", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-22", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Chengdong Zhang", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60829312"}, {"id": 60786388, "title": "[AutoDisabler] Test(s) disabled for Triage: BwgTabHelperTest.TestDidStartNavigation_ShowsImageRemixIPH", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-17", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Ye Tian", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60786388"}, {"id": 60780755, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.customtabs.TabReparentingTest#testTabReparentingSelectPopup", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-16", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Jingping Sun", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60780755"}, {"id": 60761372, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.tabmodel.UndoTabModelTest#testIncognito_UndoAlwaysNotSupportedOnFinishingMultipleTabClosure", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-14", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Jingping Sun", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60761372"}, {"id": 60728812, "title": "[MSRC] [105834] - Edge Mobile (Android-iOS) - Spoofing - Full Address Bar Spoof Using Bing, Path Traversal and Unicode Dot", "bug_type": "Blocking", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-11", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Huili Liu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60728812"}, {"id": 59803166, "title": "[MSRC] [102580] - Edge Android - Spoofing - Spoofing address bar when address bar is obscured by virtual keyboard", "bug_type": "Blocking", "priority": "", "area_path": "Core\\Browsing", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Browsing", "created": "2025-10-15", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Huili Liu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/59803166"}, {"id": 59646086, "title": "[MSRC] [102212] - Edge Android - Spoofing - Address Bar Spoofing (Origin Hiding) using Blob URL", "bug_type": "Blocking", "priority": "", "area_path": "Core\\Browsing", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Browsing", "created": "2025-10-03", "deadline": "2026-03-05", "is_overdue": false, "days_until_deadline": 22, "assigned_to": "Huili Liu", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/59646086"}, {"id": 60808675, "title": "Keyboard focus order is not logical on home page after “News and More” Control.", "bug_type": "Accessibility", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-20", "deadline": "2026-03-21", "is_overdue": false, "days_until_deadline": 38, "assigned_to": "Wangyang Dai", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60808675"}, {"id": 60821882, "title": "More options popup is not closed using Esc key.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-21", "deadline": "2026-03-22", "is_overdue": false, "days_until_deadline": 39, "assigned_to": "Lin Huang", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60821882"}, {"id": 60821069, "title": "Talkback announces “unlabeled image” for 'Search' icon, 'Back', and 'Clear Search' controls.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-01-21", "deadline": "2026-03-22", "is_overdue": false, "days_until_deadline": 39, "assigned_to": "Lin Guo", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60821069"}, {"id": 60834421, "title": "Voice over focus is not moving to the non-interactive text present in the Make Microsoft Edge your default browser page.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-22", "deadline": "2026-03-23", "is_overdue": false, "days_until_deadline": 40, "assigned_to": "Hengyou Zhang", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60834421"}, {"id": 60834259, "title": "Keyboard focus is not moving separately to 'Diagnostic data and Microsoft privacy statement' links.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-22", "deadline": "2026-03-23", "is_overdue": false, "days_until_deadline": 40, "assigned_to": "Annam Prathyusha (HCL Technologies Corporate Services)", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60834259"}, {"id": 60834095, "title": "Voice over is not announcing the copy and copied information after activating on Username control.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-22", "deadline": "2026-03-23", "is_overdue": false, "days_until_deadline": 40, "assigned_to": "Annam Prathyusha (HCL Technologies Corporate Services)", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60834095"}, {"id": 60833626, "title": "On larger text settings, 'Sign in to sync' text is getting truncated.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2026-01-22", "deadline": "2026-03-23", "is_overdue": false, "days_until_deadline": 40, "assigned_to": "Toni Yang", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60833626"}, {"id": 60831485, "title": "Talkback does not announce search suggestions when entering text in 'Search Extensions Edit'.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-01-22", "deadline": "2026-03-23", "is_overdue": false, "days_until_deadline": 40, "assigned_to": "Lin Guo", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60831485"}, {"id": 60831313, "title": "[Android][Hub][Favorites] “Favorites” text appears as headings but not announced as headings by talkback.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-22", "deadline": "2026-03-23", "is_overdue": false, "days_until_deadline": 40, "assigned_to": "GitHub Copilot", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60831313"}, {"id": 60830171, "title": "'Run in InPrivate' toggle switch gets cropped when larger text settings is applied.", "bug_type": "Accessibility", "priority": "P1", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-01-22", "deadline": "2026-03-23", "is_overdue": false, "days_until_deadline": 40, "assigned_to": "Lin Guo", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60830171"}, {"id": 60869533, "title": "[Changed Policy] Upstream change found for NTPContentSuggestionsEnabled.yaml", "bug_type": "Blocking", "priority": "", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2026-01-26", "deadline": "2026-04-02", "is_overdue": false, "days_until_deadline": 50, "assigned_to": "Guanghui Zhang", "release": "Edge 147", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60869533"}, {"id": 60846263, "title": "[Changed Policy] Upstream change found for ComponentUpdatesEnabled.yaml", "bug_type": "Blocking", "priority": "", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2026-01-23", "deadline": "2026-04-02", "is_overdue": false, "days_until_deadline": 50, "assigned_to": "Toni Yang", "release": "Edge 147", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60846263"}, {"id": 60006949, "title": "[MSRC] [103139] - Edge - Spoofing - Misleading source information in download pop up", "bug_type": "Blocking", "priority": "P1", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2025-10-31", "deadline": "2026-04-02", "is_overdue": false, "days_until_deadline": 50, "assigned_to": "Lin Huang", "release": "Edge 147", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60006949"}, {"id": 59468316, "title": "[Changed Policy] Upstream change found for AutoSelectCertificateForUrls.yaml", "bug_type": "Blocking", "priority": "", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2025-10-02", "deadline": "2026-04-02", "is_overdue": false, "days_until_deadline": 50, "assigned_to": "Guanghui Zhang", "release": "Edge 147", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/59468316"}, {"id": 31853127, "title": "[Changed Policy] Upstream change found for 'BrowserSignin'", "bug_type": "Blocking", "priority": "", "area_path": "Identity", "area_path_full": "Edge\\Edge China\\Mobile\\Identity", "created": "2021-02-25", "deadline": "2026-04-02", "is_overdue": false, "days_until_deadline": 50, "assigned_to": "Toni Yang", "release": "Edge 147", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/31853127"}, {"id": 60987837, "title": "regressions | 0.26% | main | ios_edge_sizes\\Edge.app\\size:uncompressed", "bug_type": "Performance", "priority": "P1", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-06", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Ting Ding", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60987837"}, {"id": 60895435, "title": "regressions | 0.03% | official/3719m144 | ios_edge_sizes\\Edge.app\\size:uncompressed", "bug_type": "Performance", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-28", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Yuan Yin", "release": "Edge 144", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60895435"}, {"id": 60417904, "title": "regressions | 0.24-0.28% | main | Multiple metrics regressed in ios_edge_sizes due to: Merged PR 14322265: Reland \"Rusty MIP for iOS\" ...", "bug_type": "Performance", "priority": "", "area_path": "Sync", "area_path_full": "Edge\\Edge China\\Mobile\\Sync", "created": "2025-12-03", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Zhuoyu Qian", "release": "Edge 144", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60417904"}, {"id": 60194355, "title": "regressions | 0.94-1.18% | main | android_edge_sizes\\ChromePublic.apk\\size:uncompressed", "bug_type": "Performance", "priority": "", "area_path": "Sync", "area_path_full": "Edge\\Edge China\\Mobile\\Sync", "created": "2025-11-15", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Zhuoyu Qian", "release": "Edge 144", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60194355"}, {"id": 58539265, "title": "regressions | 0.07-0.08% | main | android_edge_sizes\\ChromePublic.apk\\size:uncompressed", "bug_type": "Performance", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2025-07-29", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Guting Chen", "release": "Edge 140", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/58539265"}, {"id": 58242806, "title": "[Android] Remove authenticator landing page pic/code resource to fix package regression", "bug_type": "Performance", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2025-07-04", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Guting Chen", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/58242806"}, {"id": 60989833, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.toolbar.extensions.ExtensionToolbarTest#testPinnedActions", "bug_type": "Disabled Tests", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-02-06", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Wangyang Dai", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60989833"}, {"id": 60835702, "title": "Test disabled for triage ManageSyncSettingsCoordinatorTest.TestOpenBookmarksLimitExceededHelp", "bug_type": "Disabled Tests", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-22", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Ye Tian", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60835702"}, {"id": 60731862, "title": "Pump Follow-up: Upstream refactor to Browser for Android desktop conflicts with downstream extensions work", "bug_type": "Disabled Tests", "priority": "P1", "area_path": "Growth\\Extensions", "area_path_full": "Edge\\Edge China\\Mobile\\Growth\\Extensions", "created": "2026-01-12", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Lin Guo", "release": "Edge 145", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60731862"}, {"id": 60725322, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.test.memory_leaks.PublicTransitLeakTest#omniboxTest org.chromium.chrome.test.memory_leaks.PublicTransitLeakTest#ntpAndIncognitoNtpTest", "bug_type": "Disabled Tests", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-01-12", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Ke Yu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60725322"}, {"id": 60634815, "title": "[Android][UC] enable by default, test broken", "bug_type": "Disabled Tests", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-12-29", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "GitHub Copilot", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60634815"}, {"id": 59881611, "title": "Disabled Test: Test(s) disabled for Triage: Unclassed.org.chromium.chrome.browser.page_load_metrics.PageLoadMetricsTest#testPageLoadMetricNavigationIdSetCorrectly", "bug_type": "Disabled Tests", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2025-10-21", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Li Liu", "release": "Edge 143", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/59881611"}, {"id": 59807059, "title": "[Android][X64] AutoPictureInPictureTabHelperTest trigger emulator offline issue in X64.", "bug_type": "Disabled Tests", "priority": "P1", "area_path": "Fundamentals\\Multimedia", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Multimedia", "created": "2025-10-16", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Zeyu Fu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/59807059"}, {"id": 59307893, "title": "Disabled Test: Test(s) disabled for Triage: org.chromium.chrome.browser.quick_delete.QuickDeleteBridgeTest#testLastVisitedDomainAndUniqueDomains_WhenVisitsExistInRange", "bug_type": "Disabled Tests", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2025-09-19", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Shao xuan Shen (CSI Interfusion Co Ltd)", "release": "Edge 142", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/59307893"}, {"id": 59259774, "title": "[AutoDisabler] Test(s) disabled for Triage: LegacyAudioFileReaderTest.AAC LegacyAudioFileReaderTest.AAC_SinglePacket LegacyAudioFileReaderTest.AAC_ADTS", "bug_type": "Disabled Tests", "priority": "P1", "area_path": "Fundamentals\\Multimedia", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Multimedia", "created": "2025-09-16", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Zeyu Fu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/59259774"}, {"id": 59203542, "title": "[AutoDisabler] Test(s) disabled for Triage: CWVWebViewTest.InteractionState CWVWebViewTest.InputAccessoryView CWVWebViewTest.EncodeDecodeLegacy CWVWebViewTest.EncodeDecodeOptimized CWVWebViewTest.EncodeDecodeMigrateLegacyToOptimized CWVWebViewTest.Enco...", "bug_type": "Disabled Tests", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2025-09-11", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Chuan Li", "release": "Edge 142", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/59203542"}, {"id": 58776887, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.edge_tracking_prevention.EdgeTrackingPreventionTest#test_set_site_permission", "bug_type": "Disabled Tests", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2025-08-14", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Yu Jiang", "release": "Edge 141", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/58776887"}, {"id": 58776886, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.page_info.EdgePageInfoViewTest#testNewPageInfo org.chromium.chrome.browser.page_info.EdgePageInfoViewTest#testNewPageInfoViewShowUp org.chromium.chrome.browser.page_info.EdgePageIn...", "bug_type": "Disabled Tests", "priority": "", "area_path": "Fundamentals\\Security and Privacy", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Security and Privacy", "created": "2025-08-14", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Yu Jiang", "release": "Edge 141", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/58776886"}, {"id": 58728939, "title": "Disabled context menu test files suspected of crashing the emulator", "bug_type": "Disabled Tests", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-08-11", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Ziwen Lin", "release": "Edge 141", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/58728939"}, {"id": 58724513, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.contextmenu.CustomTabContextMenuTest#testCustomItemPresent_WhenFeatureEnabled", "bug_type": "Disabled Tests", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-08-11", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Ziwen Lin", "release": "Edge 141", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/58724513"}, {"id": 58409886, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.contextmenu.ContextMenuTest#testCopyLinkURL org.chromium.chrome.browser.contextmenu.ContextMenuTest#testCopyImageLinkCopiesLinkURL org.chromium.chrome.browser.contextmenu.ContextMe...", "bug_type": "Disabled Tests", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-07-17", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Ziwen Lin", "release": "Edge 140", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/58409886"}, {"id": 58064544, "title": "[AutoDisabler] Test(s) disabled for Triage: Unclassed.org.chromium.chrome.browser.omnibox.suggestions.OmniboxPedalsTest#testManagePasswordsNoUpmFlow", "bug_type": "Disabled Tests", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-06-22", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Storm Yin", "release": "Edge 146", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/58064544"}, {"id": 57579641, "title": "[Android] Disabled FieldCanBeFinal, FieldCanBeLocal, FieldCanBeStatic error prone checks that were enabled by upstream", "bug_type": "Disabled Tests", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2025-05-16", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Yu Jiang", "release": "Edge 138", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/57579641"}, {"id": 57111947, "title": "[Androi Beta] High failure rate test cases", "bug_type": "Disabled Tests", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2025-04-11", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Yu Jiang", "release": "Edge 136", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/57111947"}, {"id": 57078288, "title": "Disabled Test: Test(s) disabled for Triage: Unclassed.org.chromium.chrome.browser.crash.LogcatExtractionRunnableTest#testSimpleExtraction", "bug_type": "Disabled Tests", "priority": "", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2025-04-09", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Yu Jiang", "release": "Edge 137", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/57078288"}, {"id": 56390239, "title": "[AutoDisabler] Test(s) disabled for Triage: org.chromium.chrome.browser.SwipeRefreshHandlerTest#testAccessibilityAnnouncement_swipingASecondTime and testAccessibilityAnnouncement", "bug_type": "Disabled Tests", "priority": "", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-02-25", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Jingping Sun", "release": "Edge 135", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/56390239"}, {"id": 37214350, "title": "EdgeMetricsServiceTest#BasicFreMetricsTest, SystemInfoEventTest", "bug_type": "Disabled Tests", "priority": "", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2021-11-30", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Haipeng Wang", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/37214350"}, {"id": 37020858, "title": "[iOS] Test failed web_state_unittest CreateFullPagePdf_ValidURL_iOS14", "bug_type": "Disabled Tests", "priority": "", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2021-11-12", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Weipeng Li", "release": "Edge 140", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/37020858"}, {"id": 37020851, "title": "[iOS] Test faild web_state_unittest->CreateFullPagePdfWebStatePdfContent", "bug_type": "Disabled Tests", "priority": "", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2021-11-12", "deadline": "N/A", "is_overdue": false, "days_until_deadline": null, "assigned_to": "Weipeng Li", "release": "Edge 140", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/37020851"}], "p0p1_bugs": [{"id": 60206703, "title": "[Navigation bar][Android]Open the smartphone gesture navigation bar, a white bar appears at the bottom", "bug_type": "P0/P1", "priority": "P1", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2025-11-17", "deadline": "2026-01-16", "is_overdue": true, "days_until_deadline": -26, "assigned_to": "Lin Guo", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60206703"}, {"id": 60618028, "title": "[Upstream Refactor] Upstream about to deperate the usage of UrlConstants.NTP_URL, feature in NTP settings may be affected.", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2025-12-25", "deadline": "2026-02-23", "is_overdue": false, "days_until_deadline": 12, "assigned_to": "Storm Yin", "release": "Edge 145", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60618028"}, {"id": 60632603, "title": "[Favorites][iPad]Unable to return to the top after searching in Favorites", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Application", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Application", "created": "2025-12-29", "deadline": "2026-02-27", "is_overdue": false, "days_until_deadline": 16, "assigned_to": "Ye Tian", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60632603"}, {"id": 60631847, "title": "[Crash][iPad] The edge will crash when click the \"Favorites\" button multiple times", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Application", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Application", "created": "2025-12-29", "deadline": "2026-02-27", "is_overdue": false, "days_until_deadline": 16, "assigned_to": "Ye Tian", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60631847"}, {"id": 60644237, "title": "[top crash] web::WebStateObserver::~WebStateObserver() browser_coordinator.mm", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Reliability", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Reliability", "created": "2025-12-31", "deadline": "2026-03-01", "is_overdue": false, "days_until_deadline": 18, "assigned_to": "Ting Ding", "release": "Edge 143", "product": "ios", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60644237"}, {"id": 60652308, "title": "[top crash] web::WebStateObserver::~WebStateObserver() browser_coordinator.mm", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Reliability", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Reliability", "created": "2026-01-02", "deadline": "2026-03-03", "is_overdue": false, "days_until_deadline": 20, "assigned_to": "Dongye He", "release": "Edge 144", "product": "ios", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60652308"}, {"id": 60686239, "title": "[FRE Copilot Mode][Android] The “Hide this card” option far way from the selected card in landscape", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Browsing", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Browsing", "created": "2026-01-07", "deadline": "2026-03-08", "is_overdue": false, "days_until_deadline": 25, "assigned_to": "Storm Yin", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60686239"}, {"id": 60693922, "title": "[Crash][iOS] Edge crashes when opened.(only one device)", "bug_type": "P0/P1", "priority": "P1", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-01-08", "deadline": "2026-03-09", "is_overdue": false, "days_until_deadline": 26, "assigned_to": "Xiaowei Gao", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60693922"}, {"id": 60707422, "title": "[Android][How-To] user asks how to set a page as homepage", "bug_type": "P0/P1", "priority": "P1", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-09", "deadline": "2026-03-10", "is_overdue": false, "days_until_deadline": 27, "assigned_to": "Wangyang Dai", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60707422"}, {"id": 60724649, "title": "[Android] read aloud not working on 143", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-12", "deadline": "2026-03-13", "is_overdue": false, "days_until_deadline": 30, "assigned_to": "Ziwen Lin", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60724649"}, {"id": 60736708, "title": "[Favorites][iOS][Crash] Edge crashes after adding to favorites", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-13", "deadline": "2026-03-14", "is_overdue": false, "days_until_deadline": 31, "assigned_to": "Ye Tian", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60736708"}, {"id": 60736665, "title": "[Crash][iOS]Edge got stuck and then crashed when all favorites are selected and deleted with one click", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Application", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Application", "created": "2026-01-13", "deadline": "2026-03-14", "is_overdue": false, "days_until_deadline": 31, "assigned_to": "Ye Tian", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60736665"}, {"id": 60750853, "title": "[Picasso][iOS][C6 Copilot Pump] After turning off contextual toggle, no pop-up window will appear when sending context-related questions.", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Copilot", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Copilot", "created": "2026-01-14", "deadline": "2026-03-15", "is_overdue": false, "days_until_deadline": 32, "assigned_to": "Mia Zhao", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60750853"}, {"id": 60794175, "title": "[Android][Crash] Download feature related NotReach crash", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-19", "deadline": "2026-03-20", "is_overdue": false, "days_until_deadline": 37, "assigned_to": "Lin Huang", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60794175"}, {"id": 60808194, "title": "[NTP Copilot Mode][iOS] The middle card cannot fully display in Landscape/Portrait mode", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Copilot", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Copilot", "created": "2026-01-20", "deadline": "2026-03-21", "is_overdue": false, "days_until_deadline": 38, "assigned_to": "Min Xiong", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60808194"}, {"id": 60834154, "title": "'Hide or show' control is not accessible using keyboard.", "bug_type": "P0/P1", "priority": "P0", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-01-22", "deadline": "2026-03-23", "is_overdue": false, "days_until_deadline": 40, "assigned_to": "Annam Prathyusha (HCL Technologies Corporate Services)", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60834154"}, {"id": 60829328, "title": "[Android][Crash]org.chromium.chrome.browser.edge_ntp.v2.NewTabPageV2LayoutPhone.updateTopBarMargin NewTabPageV2LayoutPhone.java, line 305", "bug_type": "P0/P1", "priority": "P1", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-01-22", "deadline": "2026-03-23", "is_overdue": false, "days_until_deadline": 40, "assigned_to": "Wangyang Dai", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60829328"}, {"id": 60876158, "title": "[top crash] media_session::mojom::MediaControllerManagerProxy::CreateActiveMediaController(mojo::PendingReceiver<media_session::mojom::MediaController>) in media_controller.mojom.cc:271", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Reliability", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Reliability", "created": "2026-01-27", "deadline": "2026-03-28", "is_overdue": false, "days_until_deadline": 45, "assigned_to": "Zeyu Fu", "release": "Edge 145", "product": "android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60876158"}, {"id": 60875026, "title": "[iOS] BREAKING – Remove gCrWebLegacy JS bridging before next upstream pump - Copy", "bug_type": "P0/P1", "priority": "P1", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-01-27", "deadline": "2026-03-28", "is_overdue": false, "days_until_deadline": 45, "assigned_to": "Mia Zhao", "release": "", "product": "All Platforms", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60875026"}, {"id": 60873626, "title": "[Picasso][iOS][Multi-tab context V2] When summarizing multiple web pages, copilot sometimes reports that it cannot read content from the web page.", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Copilot", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Copilot", "created": "2026-01-27", "deadline": "2026-03-28", "is_overdue": false, "days_until_deadline": 45, "assigned_to": "Ting Ding", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60873626"}, {"id": 60873440, "title": "[Address bar][Android Tablet] The second search box cannot accept input through an external keyboard when move the cursor to it", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Application", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Application", "created": "2026-01-27", "deadline": "2026-03-28", "is_overdue": false, "days_until_deadline": 45, "assigned_to": "Storm Yin", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60873440"}, {"id": 60888001, "title": "[Android][Commercial Copilot NTP Card] No response after hiding card and clicking Page setting->Cards", "bug_type": "P0/P1", "priority": "P1", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2026-01-28", "deadline": "2026-03-29", "is_overdue": false, "days_until_deadline": 46, "assigned_to": "Hao Wang", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60888001"}, {"id": 60887122, "title": "[Add to phone][Android]UI is abnormal when editing Add to Phone.", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Browsing", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Browsing", "created": "2026-01-28", "deadline": "2026-03-29", "is_overdue": false, "days_until_deadline": 46, "assigned_to": "Huili Liu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60887122"}, {"id": 60887094, "title": "[Android][Commercial Copilot NTP Card] The placeholder didn't take effect", "bug_type": "P0/P1", "priority": "P1", "area_path": "Enterprise", "area_path_full": "Edge\\Edge China\\Mobile\\Enterprise", "created": "2026-01-28", "deadline": "2026-03-29", "is_overdue": false, "days_until_deadline": 46, "assigned_to": "Tiantong Wu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60887094"}, {"id": 60908880, "title": "Edge mobile browser InPrivate activity logs visible in the iOS App Privacy Report", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Security and Privacy", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Security and Privacy", "created": "2026-01-29", "deadline": "2026-03-30", "is_overdue": false, "days_until_deadline": 47, "assigned_to": "Daiming Pan", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60908880"}, {"id": 60901881, "title": "[Copilot Mode][Android] The color display of \"Lock\" button in the omnibox is abnormal when enter InPrivate mode and search for any content and enter the search results page", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Search", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Search", "created": "2026-01-29", "deadline": "2026-03-30", "is_overdue": false, "days_until_deadline": 47, "assigned_to": "Storm Yin", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60901881"}, {"id": 60900709, "title": "[Unified Composer Multimodal Expansion][Android] The \"Copilot\" icon and \"Ask Copilot\" button appear in the omnibox when select \"Quick response\"/\"Think deeper\" and input text in the omnibox", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Search", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Search", "created": "2026-01-29", "deadline": "2026-03-30", "is_overdue": false, "days_until_deadline": 47, "assigned_to": "Huili Liu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60900709"}, {"id": 60914603, "title": "[Contextual Upsell SERP][Android]The background color of the copilot upsell icon has not disappeared", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Search", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Search", "created": "2026-01-30", "deadline": "2026-03-31", "is_overdue": false, "days_until_deadline": 48, "assigned_to": "Huili Liu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60914603"}, {"id": 60914463, "title": "[IOS][Crash]CommandDispatcher.strictCallableForProtocol: immediate_crash.h, line 180", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Reliability", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Reliability", "created": "2026-01-30", "deadline": "2026-03-31", "is_overdue": false, "days_until_deadline": 48, "assigned_to": "Nora Chen (CSI Interfusion Co Ltd)", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60914463"}, {"id": 60912840, "title": "[IOS][top crash]0x147dd4000 + 55352 aad signout", "bug_type": "P0/P1", "priority": "P1", "area_path": "Identity", "area_path_full": "Edge\\Edge China\\Mobile\\Identity", "created": "2026-01-30", "deadline": "2026-03-31", "is_overdue": false, "days_until_deadline": 48, "assigned_to": "Chao Zhang", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60912840"}, {"id": 60931521, "title": "[Android][Upstream on par][History]Checkbox background color issue", "bug_type": "P0/P1", "priority": "P1", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-02", "deadline": "2026-04-03", "is_overdue": false, "days_until_deadline": 51, "assigned_to": "Lin Huang", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60931521"}, {"id": 60931518, "title": "[Android][Upstream on par][History]Favicon background color issue", "bug_type": "P0/P1", "priority": "P1", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-02", "deadline": "2026-04-03", "is_overdue": false, "days_until_deadline": 51, "assigned_to": "Lin Huang", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60931518"}, {"id": 60928899, "title": "[iOS][Upstream on par][Favorites] Folder text alignment issue", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Application", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Application", "created": "2026-02-02", "deadline": "2026-04-03", "is_overdue": false, "days_until_deadline": 51, "assigned_to": "Ye Tian", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60928899"}, {"id": 60928896, "title": "[iOS][Upstream on par][Favorites] Folder icon alignment issue", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Application", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Application", "created": "2026-02-02", "deadline": "2026-04-03", "is_overdue": false, "days_until_deadline": 51, "assigned_to": "Ye Tian", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60928896"}, {"id": 60948642, "title": "[Android][Crash]org.chromium.chrome.browser.customtabs.BaseCustomTabActivity.onMAMNewIntent BaseCustomTabActivity.java, line 319", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core", "area_path_full": "Edge\\Edge China\\Mobile\\Core", "created": "2026-02-03", "deadline": "2026-04-04", "is_overdue": false, "days_until_deadline": 52, "assigned_to": "Jingping Sun", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60948642"}, {"id": 60947750, "title": "[Favorites][iPad]The Favorites close button does not respond after adding a favorite", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Browsing", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Browsing", "created": "2026-02-03", "deadline": "2026-04-04", "is_overdue": false, "days_until_deadline": 52, "assigned_to": "Ye Tian", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60947750"}, {"id": 60965438, "title": "[Android]User reports Microsoft Rewards page does not open/load in Edge", "bug_type": "P0/P1", "priority": "P1", "area_path": "Growth", "area_path_full": "Edge\\Edge China\\Mobile\\Growth", "created": "2026-02-04", "deadline": "2026-04-05", "is_overdue": false, "days_until_deadline": 53, "assigned_to": "Active", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60965438"}, {"id": 60961324, "title": "[Address Bar][Andorid]When opening a new page, the screen flashes white and the address bar briefly appears at the top.", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Browsing", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Browsing", "created": "2026-02-04", "deadline": "2026-04-05", "is_overdue": false, "days_until_deadline": 53, "assigned_to": "Storm Yin", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60961324"}, {"id": 60976687, "title": "[Unified Composer Multimodal Expansion][Android] The attachment uploaded by Camera/Photos/Files can't send to copilot", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Search", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Search", "created": "2026-02-05", "deadline": "2026-04-06", "is_overdue": false, "days_until_deadline": 54, "assigned_to": "Huili Liu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60976687"}, {"id": 60976663, "title": "[Edge Theme][Android] Cannot see the edge theme card", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-05", "deadline": "2026-04-06", "is_overdue": false, "days_until_deadline": 54, "assigned_to": "Zeyu Fu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60976663"}, {"id": 60976657, "title": "[Edge Theme][iOS] Cannot see the edge theme card", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-05", "deadline": "2026-04-06", "is_overdue": false, "days_until_deadline": 54, "assigned_to": "Chuan Li", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60976657"}, {"id": 60975761, "title": "[Android][Memory] RSS P95 has decrease by ~5.6%, P75 has decrease by ~12.8%.", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals", "created": "2026-02-05", "deadline": "2026-04-06", "is_overdue": false, "days_until_deadline": 54, "assigned_to": "Ke Yu", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60975761"}, {"id": 60974279, "title": "[Add to Phone][Android]Search bar moves to the middle of the page after using Add to Phone", "bug_type": "P0/P1", "priority": "P1", "area_path": "Core\\Browsing", "area_path_full": "Edge\\Edge China\\Mobile\\Core\\Browsing", "created": "2026-02-05", "deadline": "2026-04-06", "is_overdue": false, "days_until_deadline": 54, "assigned_to": "Storm Yin", "release": "", "product": "Android", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60974279"}, {"id": 60988501, "title": "[Picasso][iOS][C1 Copilot Pump] After clicking the \"New Theme\" button, the keyboard will rise up and block the chips.", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Copilot", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Copilot", "created": "2026-02-06", "deadline": "2026-04-07", "is_overdue": false, "days_until_deadline": 55, "assigned_to": "Yuan Yin", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/60988501"}, {"id": 61018889, "title": "[Onboarding Copilot Mode][iOS] The edu card/journeys card has become longer in landscape mode.", "bug_type": "P0/P1", "priority": "P1", "area_path": "Fundamentals\\Copilot", "area_path_full": "Edge\\Edge China\\Mobile\\Fundamentals\\Copilot", "created": "2026-02-10", "deadline": "2026-04-11", "is_overdue": false, "days_until_deadline": 59, "assigned_to": "Min Xiong", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61018889"}, {"id": 61017750, "title": "[NTP][iOS]Alignment and spacing issues (left-aligned layout) in the Page Settings menu.", "bug_type": "P0/P1", "priority": "P1", "area_path": "Root", "area_path_full": "Edge\\Edge China\\Mobile", "created": "2026-02-10", "deadline": "2026-04-11", "is_overdue": false, "days_until_deadline": 59, "assigned_to": "Hengyou Zhang", "release": "", "product": "iOS", "url": "https://dev.azure.com/microsoft/Edge/_workitems/edit/61017750"}]};
+
+        // DOM Elements
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const jsonFileInput = document.getElementById('json-file-input');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            hideLoading();
+            setupEventListeners();
+
+            if (EMBEDDED_DATA) {
+                reportData = EMBEDDED_DATA;
+                renderDashboard();
+            } else {
+                tryLoadDefaultData();
+            }
+        });
+
+        function setupEventListeners() {
+            jsonFileInput.addEventListener('change', handleFileSelect);
+            document.getElementById('type-filter').addEventListener('change', applyFilters);
+            document.getElementById('status-filter').addEventListener('change', applyFilters);
+            document.getElementById('search-input').addEventListener('input', debounce(applyFilters, 300));
+
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', () => handleSort(th.dataset.sort));
+            });
+        }
+
+        function tryLoadDefaultData() {
+            fetch('sla_report.json')
+                .then(res => {
+                    if (!res.ok) throw new Error('Not found');
+                    return res.json();
+                })
+                .then(data => {
+                    reportData = data;
+                    renderDashboard();
+                })
+                .catch(() => {
+                    console.log('No default sla_report.json found.');
+                });
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showLoading();
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    reportData = JSON.parse(e.target.result);
+                    renderDashboard();
+                    hideLoading();
+                } catch (err) {
+                    alert('JSON parse error: ' + err.message);
+                    hideLoading();
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function showLoading() {
+            loadingOverlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            loadingOverlay.classList.add('hidden');
+        }
+
+        function renderDashboard() {
+            if (!reportData) return;
+
+            // Update header
+            document.getElementById('team-name').textContent = reportData.meta.team_name;
+            document.getElementById('report-timestamp').textContent = reportData.meta.generated_at;
+            document.getElementById('cmd-team').textContent = reportData.meta.team_name.toLowerCase().replace(/\s+/g, '-');
+
+            // Update stats
+            document.getElementById('stat-total').textContent = reportData.summary.total_bugs;
+            document.getElementById('stat-pass-rate').textContent = reportData.summary.pass_rate + '%';
+            document.getElementById('stat-overdue').textContent = reportData.summary.overdue_count;
+            document.getElementById('stat-deadline').textContent = reportData.summary.bugs_with_deadline;
+
+            // Render sections
+            renderCategoryBars();
+            renderDeadlineChart();
+            renderAssigneeList();
+
+            // Render tables
+            filteredSlaBugs = [...reportData.sla_bugs];
+            filteredP0P1Bugs = [...(reportData.p0p1_bugs || [])];
+            currentPage = 1;
+            p0p1CurrentPage = 1;
+            renderSlaTable();
+            renderP0P1Table();
+        }
+
+        function renderCategoryBars() {
+            const container = document.getElementById('category-bars');
+            const categories = reportData.categories;
+            const maxCount = Math.max(...categories.map(c => c.count), 1);
+
+            container.innerHTML = categories.map(cat => {
+                const width = (cat.count / maxCount) * 100;
+                const cssClass = cat.key.replace('_', '-');
+                return `
+                    <div class="progress-item">
+                        <div class="progress-label">
+                            <span class="progress-icon ${cssClass}"></span>
+                            <span>${cat.name}</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${cssClass}" style="width: ${width}%"></div>
+                        </div>
+                        <div class="progress-count">${cat.count}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDeadlineChart() {
+            const dist = reportData.deadline_distribution;
+            const max = Math.max(...Object.values(dist), 1);
+            const items = [
+                { key: 'overdue', label: 'Overdue', value: dist.overdue, class: 'overdue' },
+                { key: 'this_week', label: 'This Week', value: dist.this_week, class: 'warning' },
+                { key: 'next_week', label: 'Next Week', value: dist.next_week, class: 'warning' },
+                { key: 'this_month', label: 'This Month', value: dist.this_month, class: 'ok' },
+                { key: 'later', label: 'Later', value: dist.later, class: 'ok' },
+                { key: 'no_deadline', label: 'No Deadline', value: dist.no_deadline, class: 'ok' }
+            ];
+
+            const container = document.getElementById('deadline-chart');
+            container.innerHTML = items.map(item => {
+                const blockCount = Math.round((item.value / max) * 20);
+                const blocks = '█'.repeat(blockCount) + '░'.repeat(20 - blockCount);
+                return `
+                    <div class="ascii-bar-row">
+                        <span class="ascii-bar-label">${item.label}</span>
+                        <div class="ascii-bar-visual">
+                            <span class="ascii-bar-blocks ${item.class}">${blocks}</span>
+                            <span class="ascii-bar-value">${item.value}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderAssigneeList() {
+            const container = document.getElementById('assignee-list');
+            const assignees = reportData.assignee_distribution.slice(0, 10);
+
+            if (assignees.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No data</p></div>';
+                return;
+            }
+
+            container.innerHTML = assignees.map(a => {
+                const initials = a.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                return `
+                    <div class="assignee-item">
+                        <div class="assignee-avatar">${initials || '??'}</div>
+                        <div class="assignee-name" title="${a.name}">${a.name}</div>
+                        <div class="assignee-count">${a.count}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function applyFilters() {
+            const typeFilter = document.getElementById('type-filter').value;
+            const statusFilter = document.getElementById('status-filter').value;
+            const searchQuery = document.getElementById('search-input').value.toLowerCase();
+
+            filteredSlaBugs = reportData.sla_bugs.filter(bug => {
+                if (typeFilter && bug.bug_type !== typeFilter) return false;
+                if (statusFilter === 'overdue' && !bug.is_overdue) return false;
+                if (statusFilter === 'this_week' && (bug.days_until_deadline === null || bug.days_until_deadline < 0 || bug.days_until_deadline > 7)) return false;
+                if (statusFilter === 'ok' && bug.is_overdue) return false;
+
+                if (searchQuery) {
+                    const idMatch = String(bug.id).includes(searchQuery);
+                    const titleMatch = bug.title.toLowerCase().includes(searchQuery);
+                    if (!idMatch && !titleMatch) return false;
+                }
+
+                return true;
+            });
+
+            currentPage = 1;
+            applySorting();
+            renderSlaTable();
+        }
+
+        function handleSort(key) {
+            if (sortConfig.key === key) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.key = key;
+                sortConfig.direction = 'asc';
+            }
+
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                if (th.dataset.sort === key) {
+                    th.classList.add(sortConfig.direction === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                }
+            });
+
+            applySorting();
+            renderSlaTable();
+        }
+
+        function applySorting() {
+            const { key, direction } = sortConfig;
+            const multiplier = direction === 'asc' ? 1 : -1;
+
+            filteredSlaBugs.sort((a, b) => {
+                let valA = a[key];
+                let valB = b[key];
+
+                if (key === 'deadline') {
+                    if (valA === 'N/A') valA = '9999-99-99';
+                    if (valB === 'N/A') valB = '9999-99-99';
+                    valA = valA.replace('*', '');
+                    valB = valB.replace('*', '');
+                }
+
+                if (valA < valB) return -1 * multiplier;
+                if (valA > valB) return 1 * multiplier;
+                return 0;
+            });
+        }
+
+        function renderSlaTable() {
+            const tbody = document.getElementById('sla-table-body');
+            const totalItems = filteredSlaBugs.length;
+            const totalPages = Math.ceil(totalItems / pageSize);
+            const startIdx = (currentPage - 1) * pageSize;
+            const endIdx = Math.min(startIdx + pageSize, totalItems);
+            const pageItems = filteredSlaBugs.slice(startIdx, endIdx);
+
+            document.getElementById('sla-bug-count').textContent = `${totalItems} items`;
+
+            if (pageItems.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📭</div>
+                                <div class="empty-state-title">No matching bugs found</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = pageItems.map(bug => renderBugRow(bug)).join('');
+            }
+
+            document.getElementById('sla-pagination-info').textContent =
+                `Showing ${startIdx + 1} - ${endIdx} of ${totalItems}`;
+
+            renderPagination(totalPages);
+        }
+
+        function renderBugRow(bug) {
+            const typeClass = bug.bug_type.toLowerCase().replace(' ', '-').replace('disabled-tests', 'disabled');
+            const deadlineClass = bug.is_overdue ? 'deadline-overdue' :
+                (bug.days_until_deadline !== null && bug.days_until_deadline <= 7 ? 'deadline-soon' : 'deadline-ok');
+
+            return `
+                <tr>
+                    <td><a href="${bug.url}" target="_blank" class="bug-id-link">${bug.id}</a></td>
+                    <td><div class="bug-title" title="${escapeHtml(bug.title)}">${escapeHtml(bug.title)}</div></td>
+                    <td><span class="bug-type-badge ${typeClass}">${bug.bug_type}</span></td>
+                    <td><span class="area-path" title="${bug.area_path_full || bug.area_path}">${bug.area_path}</span></td>
+                    <td class="date-cell">${bug.created}</td>
+                    <td class="date-cell">
+                        <div class="deadline-cell">
+                            ${bug.is_overdue ? '<span class="overdue-icon">⚠</span>' : ''}
+                            <span class="${deadlineClass}">${bug.deadline}</span>
+                        </div>
+                    </td>
+                    <td class="assignee-cell" title="${bug.assigned_to}">${bug.assigned_to}</td>
+                </tr>
+            `;
+        }
+
+        function renderPagination(totalPages) {
+            const container = document.getElementById('sla-pagination');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            html += `<button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>←</button>`;
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+                } else if (i === currentPage - 2 || i === currentPage + 2) {
+                    html += `<span style="color: var(--text-muted);">...</span>`;
+                }
+            }
+
+            html += `<button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>→</button>`;
+            container.innerHTML = html;
+        }
+
+        function changePage(page) {
+            const totalPages = Math.ceil(filteredSlaBugs.length / pageSize);
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderSlaTable();
+        }
+
+        function renderP0P1Table() {
+            const tbody = document.getElementById('p0p1-table-body');
+            const totalItems = filteredP0P1Bugs.length;
+            const totalPages = Math.ceil(totalItems / pageSize);
+            const startIdx = (p0p1CurrentPage - 1) * pageSize;
+            const endIdx = Math.min(startIdx + pageSize, totalItems);
+            const pageItems = filteredP0P1Bugs.slice(startIdx, endIdx);
+
+            document.getElementById('p0p1-bug-count').textContent = `${totalItems} items`;
+
+            if (totalItems === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">🎉</div>
+                                <div class="empty-state-title">No P0/P1 Issues</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                document.getElementById('p0p1-pagination-info').textContent = 'Showing 0 - 0 of 0';
+                document.getElementById('p0p1-pagination').innerHTML = '';
+                return;
+            }
+
+            tbody.innerHTML = pageItems.map(bug => {
+                const deadlineClass = bug.is_overdue ? 'deadline-overdue' :
+                    (bug.days_until_deadline !== null && bug.days_until_deadline <= 7 ? 'deadline-soon' : 'deadline-ok');
+
+                return `
+                    <tr>
+                        <td><a href="${bug.url}" target="_blank" class="bug-id-link">${bug.id}</a></td>
+                        <td><div class="bug-title" title="${escapeHtml(bug.title)}">${escapeHtml(bug.title)}</div></td>
+                        <td><span class="bug-type-badge p0p1">${bug.priority}</span></td>
+                        <td><span class="area-path">${bug.area_path}</span></td>
+                        <td class="date-cell">${bug.created}</td>
+                        <td class="date-cell">
+                            <div class="deadline-cell">
+                                ${bug.is_overdue ? '<span class="overdue-icon">⚠</span>' : ''}
+                                <span class="${deadlineClass}">${bug.deadline}</span>
+                            </div>
+                        </td>
+                        <td class="assignee-cell" title="${bug.assigned_to}">${bug.assigned_to}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('p0p1-pagination-info').textContent =
+                `Showing ${startIdx + 1} - ${endIdx} of ${totalItems}`;
+
+            renderP0P1Pagination(totalPages);
+        }
+
+        function renderP0P1Pagination(totalPages) {
+            const container = document.getElementById('p0p1-pagination');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '';
+            html += `<button class="page-btn" onclick="changeP0P1Page(${p0p1CurrentPage - 1})" ${p0p1CurrentPage === 1 ? 'disabled' : ''}>←</button>`;
+
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= p0p1CurrentPage - 1 && i <= p0p1CurrentPage + 1)) {
+                    html += `<button class="page-btn ${i === p0p1CurrentPage ? 'active' : ''}" onclick="changeP0P1Page(${i})">${i}</button>`;
+                } else if (i === p0p1CurrentPage - 2 || i === p0p1CurrentPage + 2) {
+                    html += `<span style="color: var(--text-muted);">...</span>`;
+                }
+            }
+
+            html += `<button class="page-btn" onclick="changeP0P1Page(${p0p1CurrentPage + 1})" ${p0p1CurrentPage === totalPages ? 'disabled' : ''}>→</button>`;
+            container.innerHTML = html;
+        }
+
+        function changeP0P1Page(page) {
+            const totalPages = Math.ceil(filteredP0P1Bugs.length / pageSize);
+            if (page < 1 || page > totalPages) return;
+            p0p1CurrentPage = page;
+            renderP0P1Table();
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function debounce(fn, delay) {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => fn(...args), delay);
+            };
+        }
+    </script>
+</body>
+</html>

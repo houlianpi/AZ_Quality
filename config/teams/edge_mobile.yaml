@@ -1,0 +1,20 @@
+# config/teams/edge_mobile.yaml
+team_name: edge-mobile
+table_name: edge_mobile_bugs
+
+queries:
+  blocking:
+    query_id: "7bfde5c9-5edc-4db7-9391-a7351fb1e0ff"
+    bug_type: "Blocking"
+  a11y:
+    query_id: "bc893af7-d530-4175-955d-aa0c96108be8"
+    bug_type: "A11y"
+  security:
+    query_id: "95231853-944b-43bc-918c-cc552dea68c4"
+    bug_type: "Security"
+  need_triage:
+    query_id: "38d0e436-e69e-4bd4-bc8c-f93bdd1d1dfb"
+    bug_type: "NeedTriage"
+  p0p1:
+    query_id: "bc6939be-0e9f-4217-bcd3-e3c648f68ac3"
+    bug_type: "P0P1"

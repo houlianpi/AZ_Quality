@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">Team - Bug Status</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">QP</div>
+            <div class="sidebar-title">Quality Push</div>
+        </div>
+        <!-- User Profile (shown when logged in) -->
+        <div id="user-profile" class="user-profile" style="display: none;">
+            <img id="user-avatar" class="user-avatar" src="" alt="Avatar">
+            <div class="user-info">
+                <div id="user-name" class="user-name">--</div>
+                <div id="user-email" class="user-email">--</div>
+            </div>
+            <button id="logout-btn" class="logout-btn" title="Logout">⏻</button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/" class="sidebar-link">
+                <span class="sidebar-icon">📊</span>
+                <span class="sidebar-text">Overview</span>
+            </a>
+            <div class="sidebar-section">Teams</div>
+            <div id="sidebar-teams" class="sidebar-teams">
+                <!-- Teams will be loaded dynamically -->
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-version">v1.0</div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="terminal-container">
+            <!-- Terminal Window -->
+            <div class="terminal-window">
+            <div class="terminal-header">
+                <div class="terminal-dots">
+                    <span class="terminal-dot red"></span>
+                    <span class="terminal-dot yellow"></span>
+                    <span class="terminal-dot green"></span>
+                </div>
+                <div class="terminal-title">quality-push-dashboard — <span id="team-title">Team</span></div>
+            </div>
+            <div class="terminal-body">
+                <!-- Command Prompt -->
+                <div class="prompt-line">
+                    <span class="prompt-user">edge</span><span class="prompt-at">@</span><span class="prompt-host">quality-push</span>
+                    <span class="prompt-path">~/dashboard</span>
+                    <span class="prompt-symbol">$</span>
+                    <span class="prompt-cmd">./show_team_status.py --team <span class="text-cyan" id="cmd-team">--</span></span>
+                    <span class="cursor"></span>
+                </div>
+
+                <!-- Report Output -->
+                <div class="report-output">
+                    <div>[<span id="report-timestamp" class="timestamp">--</span>] Report generated successfully</div>
+                    <div>Snapshot: <span id="snapshot-date" class="team-label">--</span></div>
+                </div>
+
+                <!-- Summary Stats Section -->
+                <div class="section-header">BUG STATISTICS</div>
+
+                <div class="stats-grid stats-grid-5">
+                    <div class="stat-card error">
+                        <div class="stat-label">Blocking</div>
+                        <div class="stat-value" id="stat-blocking">--</div>
+                        <div class="stat-desc">Critical blockers</div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-label">A11y</div>
+                        <div class="stat-value" id="stat-a11y">--</div>
+                        <div class="stat-desc">Accessibility bugs</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-label">Security</div>
+                        <div class="stat-value" id="stat-security">--</div>
+                        <div class="stat-desc">Security issues</div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="stat-label">Need Triage</div>
+                        <div class="stat-value" id="stat-needtriage">--</div>
+                        <div class="stat-desc">Awaiting triage</div>
+                    </div>
+                    <div class="stat-card pink">
+                        <div class="stat-label">P0/P1</div>
+                        <div class="stat-value" id="stat-p0p1">--</div>
+                        <div class="stat-desc">High priority</div>
+                    </div>
+                </div>
+
+                <!-- 30-Day Trend Chart -->
+                <div class="section-header">30-DAY TREND</div>
+
+                <div class="chart-card" style="margin-bottom: 0;">
+                    <div id="trend-chart-container" class="chart-container" style="height: 250px;">
+                        <canvas id="trend-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribution Section -->
+        <div class="section-header">BUG DISTRIBUTION</div>
+
+        <div class="charts-row charts-row-3">
+            <!-- By Assignee Pie Chart -->
+            <div class="chart-card">
+                <div class="chart-title">By Assignee</div>
+                <div id="assignee-chart-container" class="chart-container">
+                    <canvas id="assignee-pie-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- By Area Path Pie Chart -->
+            <div class="chart-card">
+                <div class="chart-title">By Area Path</div>
+                <div id="areapath-chart-container" class="chart-container">
+                    <canvas id="areapath-pie-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Assignees List -->
+            <div class="chart-card">
+                <div class="chart-title">Top Assignees</div>
+                <div class="assignee-list" id="top-assignees">
+                    <div class="loading">Loading assignees</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blocking Bugs Table -->
+        <div class="section-header">BLOCKING BUGS</div>
+        <div class="table-container" id="blocking-table-container">
+            <div class="table-header">
+                <div style="display: flex; align-items: center; gap: var(--space-md);">
+                    <div class="table-title">blocking_bugs.list()</div>
+                    <span class="table-count" id="blocking-table-count">0 items</span>
+                </div>
+                <div class="table-controls">
+                    <input type="text" class="search-input" data-table="blocking" placeholder="Search...">
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="bug_id">ID</th>
+                            <th>Title</th>
+                            <th class="sortable" data-sort="priority">Priority</th>
+                            <th class="sortable" data-sort="due_date">Due Date</th>
+                            <th class="sortable" data-sort="assigned_to">Assignee</th>
+                            <th class="sortable" data-sort="state">State</th>
+                            <th class="sortable" data-sort="area_path">Area Path</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blocking-table-body"></tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <div class="pagination-info" id="blocking-pagination-info">Showing 0 - 0 of 0</div>
+                <div class="pagination-controls" id="blocking-pagination-controls"></div>
+            </div>
+        </div>
+
+        <!-- A11y Bugs Table -->
+        <div class="section-header">A11Y BUGS</div>
+        <div class="table-container" id="a11y-table-container">
+            <div class="table-header">
+                <div style="display: flex; align-items: center; gap: var(--space-md);">
+                    <div class="table-title">a11y_bugs.list()</div>
+                    <span class="table-count" id="a11y-table-count">0 items</span>
+                </div>
+                <div class="table-controls">
+                    <input type="text" class="search-input" data-table="a11y" placeholder="Search...">
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="bug_id">ID</th>
+                            <th>Title</th>
+                            <th class="sortable" data-sort="priority">Priority</th>
+                            <th class="sortable" data-sort="due_date">Due Date</th>
+                            <th class="sortable" data-sort="assigned_to">Assignee</th>
+                            <th class="sortable" data-sort="state">State</th>
+                            <th class="sortable" data-sort="area_path">Area Path</th>
+                        </tr>
+                    </thead>
+                    <tbody id="a11y-table-body"></tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <div class="pagination-info" id="a11y-pagination-info">Showing 0 - 0 of 0</div>
+                <div class="pagination-controls" id="a11y-pagination-controls"></div>
+            </div>
+        </div>
+
+        <!-- Security Bugs Table -->
+        <div class="section-header">SECURITY BUGS</div>
+        <div class="table-container" id="security-table-container">
+            <div class="table-header">
+                <div style="display: flex; align-items: center; gap: var(--space-md);">
+                    <div class="table-title">security_bugs.list()</div>
+                    <span class="table-count" id="security-table-count">0 items</span>
+                </div>
+                <div class="table-controls">
+                    <input type="text" class="search-input" data-table="security" placeholder="Search...">
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="bug_id">ID</th>
+                            <th>Title</th>
+                            <th class="sortable" data-sort="priority">Priority</th>
+                            <th class="sortable" data-sort="due_date">Due Date</th>
+                            <th class="sortable" data-sort="assigned_to">Assignee</th>
+                            <th class="sortable" data-sort="state">State</th>
+                            <th class="sortable" data-sort="area_path">Area Path</th>
+                        </tr>
+                    </thead>
+                    <tbody id="security-table-body"></tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <div class="pagination-info" id="security-pagination-info">Showing 0 - 0 of 0</div>
+                <div class="pagination-controls" id="security-pagination-controls"></div>
+            </div>
+        </div>
+
+        <!-- NeedTriage Bugs Table -->
+        <div class="section-header">NEED TRIAGE BUGS</div>
+        <div class="table-container" id="needtriage-table-container">
+            <div class="table-header">
+                <div style="display: flex; align-items: center; gap: var(--space-md);">
+                    <div class="table-title">need_triage_bugs.list()</div>
+                    <span class="table-count" id="needtriage-table-count">0 items</span>
+                </div>
+                <div class="table-controls">
+                    <input type="text" class="search-input" data-table="needtriage" placeholder="Search...">
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="bug_id">ID</th>
+                            <th>Title</th>
+                            <th class="sortable" data-sort="priority">Priority</th>
+                            <th class="sortable" data-sort="due_date">Due Date</th>
+                            <th class="sortable" data-sort="assigned_to">Assignee</th>
+                            <th class="sortable" data-sort="state">State</th>
+                            <th class="sortable" data-sort="area_path">Area Path</th>
+                        </tr>
+                    </thead>
+                    <tbody id="needtriage-table-body"></tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <div class="pagination-info" id="needtriage-pagination-info">Showing 0 - 0 of 0</div>
+                <div class="pagination-controls" id="needtriage-pagination-controls"></div>
+            </div>
+        </div>
+
+        <!-- P0P1 Bugs Table -->
+        <div class="section-header">P0/P1 BUGS</div>
+        <div class="table-container" id="p0p1-table-container">
+            <div class="table-header">
+                <div style="display: flex; align-items: center; gap: var(--space-md);">
+                    <div class="table-title">p0p1_bugs.list()</div>
+                    <span class="table-count" id="p0p1-table-count">0 items</span>
+                </div>
+                <div class="table-controls">
+                    <input type="text" class="search-input" data-table="p0p1" placeholder="Search...">
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="bug_id">ID</th>
+                            <th>Title</th>
+                            <th class="sortable" data-sort="priority">Priority</th>
+                            <th class="sortable" data-sort="due_date">Due Date</th>
+                            <th class="sortable" data-sort="assigned_to">Assignee</th>
+                            <th class="sortable" data-sort="state">State</th>
+                            <th class="sortable" data-sort="area_path">Area Path</th>
+                        </tr>
+                    </thead>
+                    <tbody id="p0p1-table-body"></tbody>
+                </table>
+            </div>
+            <div class="table-footer">
+                <div class="pagination-info" id="p0p1-pagination-info">Showing 0 - 0 of 0</div>
+                <div class="pagination-controls" id="p0p1-pagination-controls"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="text-align: center; padding: 20px; color: var(--text-dim); font-size: 0.75rem;">
+            Quality Push Dashboard v1.0 • Data refreshes daily
+        </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/table.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
